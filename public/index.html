@@ -338,7 +338,7 @@ for(const n in f1)gl.uniform1f(u(n),f1[n]);gl.drawArrays(gl.TRIANGLES,0,3);reque
 const PREM={},MI={};
 let CR={n:0},SRV=[],ON=false,etm=null;
 const PV=[
-{id:'google',n:'Google AI Studio',b:'https://generativelanguage.googleapis.com/v1beta/openai',k:'https://aistudio.google.com/apikey',d:'Gemini 2.5 Pro, Flash, Gemini 2.0 Flash',s:['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash','gemini-1.5-pro']},
+{id:'google',n:'Google AI Studio',b:'https://generativelanguage.googleapis.com/v1beta/openai',k:'https://aistudio.google.com/apikey',d:'Gemini 2.0 Flash, 1.5 Flash, 2.5 Flash (100% Free)',s:['gemini-2.0-flash','gemini-1.5-flash','gemini-2.0-flash-lite','gemini-1.5-pro','gemini-2.5-flash','gemini-2.5-pro']},
 {id:'groq',n:'Groq Cloud',b:'https://api.groq.com/openai/v1',k:'https://console.groq.com/keys',d:'Llama 3.3 70B, Qwen, Gemma, DeepSeek distills (14.4k/day free)',s:['llama-3.3-70b-versatile','llama-3.1-8b-instant','deepseek-r1-distill-llama-70b','qwen-2.5-32b','mixtral-8x7b-32768','gemma2-9b-it']},
 {id:'openrouter',n:'OpenRouter Free',b:'https://openrouter.ai/api/v1',k:'https://openrouter.ai/keys',d:'Free DeepSeek, Qwen, Llama and more',f:1,s:['deepseek/deepseek-r1:free','meta-llama/llama-3.3-70b-instruct:free','google/gemini-2.0-flash-exp:free','qwen/qwen-2.5-72b-instruct:free','mistralai/mistral-7b-instruct:free']},
 {id:'mistral',n:'Mistral AI',b:'https://api.mistral.ai/v1',k:'https://console.mistral.ai/api-keys',d:'Mistral Large, Ministral, Codestral, Nemo',s:['mistral-large-latest','codestral-latest','mistral-small-latest','ministral-8b-latest']},
@@ -348,16 +348,19 @@ const PV=[
 {id:'deepseek',n:'DeepSeek',b:'https://api.deepseek.com/v1',k:'https://platform.deepseek.com/api_keys',d:'DeepSeek-V3, DeepSeek-R1',s:['deepseek-chat','deepseek-reasoner']},
 {id:'xai',n:'xAI',b:'https://api.x.ai/v1',k:'https://console.x.ai',d:'Grok 2, Grok 3',s:['grok-2','grok-2-mini']}];
 const PP=[];
-let BK={keys:{},models:{},chain:[]};try{Object.assign(BK,JSON.parse(localStorage.getItem('ember.byok')||'{}'))}catch{}
+let BK={keys:{},models:{},chain:[]};try{
+  Object.assign(BK,JSON.parse(localStorage.getItem('ember.byok')||'{}'));
+  if(BK.models&&BK.models.google)BK.models.google=BK.models.google.filter(i=>!/deep-research|interaction|computer-use|live/i.test(i));
+  if(BK.chain)BK.chain=BK.chain.filter(i=>!/deep-research|interaction|computer-use|live/i.test(i));
+}catch{}
 const bsave=()=>{try{localStorage.setItem('ember.byok',JSON.stringify(BK))}catch{}};
 const hx=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const keyed=()=>BK.chain.filter(i=>BK.keys[i.split('|')[0]]&&!PP.includes(i.split('|')[0]));
 const short=id=>{const[p,...m]=id.split('|');return m.join('|').split('/').pop().replace(':free','')};
 
 function buildModels(){
-  const out=['Sonnet 5.5','Haiku 5.5'],seen=new Set(out);
+  const out=[],seen=new Set();
   Object.keys(PREM).forEach(k=>delete PREM[k]);Object.keys(MI).forEach(k=>delete MI[k]);
-  out.forEach(n=>MI[n]={g:'Free Models'});
   PV.forEach(p=>{
     const ms=BK.models[p.id]||(BK.keys[p.id]&&p.s?p.s:[]);
     if(ms&&ms.length){
@@ -371,6 +374,9 @@ function buildModels(){
     let nm=m.label||m.id;if(seen.has(nm))nm+=' · '+m.group;if(seen.has(nm))return;
     seen.add(nm);out.push(nm);MI[nm]={g:m.group+' (Server)',id:m.id};PREM[nm]=m.estCredits;
   });
+  ['Sonnet 5.5','Haiku 5.5'].forEach(n=>{
+    if(!seen.has(n)){seen.add(n);out.push(n);MI[n]={g:window.claude?'Claude Native':'Claude (Artifact)'}}
+  });
   models.length=0;out.forEach(n=>models.push(n));
 }
 
@@ -382,10 +388,14 @@ function setTxt(el,t){if(el.textContent!==t){el.textContent=t;el.classList.remov
 function layout(){ta.style.height='0px';const sh=ta.scrollHeight,h=Math.max(68,Math.min(sh,160));ta.style.height=h+'px';ta.style.overflowY=sh>160?'auto':'hidden';
 card.style.height=(exp?Math.max(116,h+48):48)+'px';pi.classList.toggle('exp',exp);pi.classList.toggle('rec',rec);
 trayw.style.height=files.length&&exp?'68px':'0';act.dataset.s=rec||busy?'stop':has()?'send':'mic';
-setTxt($('#mt'),models[model]||'Sonnet 5.5');setTxt($('#et'),efforts[ef]);$('#b2').style.opacity=ef>=1?1:.3;$('#b3').style.opacity=ef>=2?1:.3}
+setTxt($('#mt'),models[model]||'Free Models');setTxt($('#et'),efforts[ef]);$('#b2').style.opacity=ef>=1?1:.3;$('#b3').style.opacity=ef>=2?1:.3}
 function menuUp(){
-  const keep=models[model];buildModels();const k=models.indexOf(keep);
-  model=k>=0?k:(models.indexOf('Sonnet 5.5')>=0?models.indexOf('Sonnet 5.5'):0);let last='';
+  const keep=models[model];buildModels();
+  let k=keep?models.indexOf(keep):-1;
+  if(k<0&&BK.chain.length){const chm=BK.chain[0].split('|').slice(1).join('|');k=models.findIndex(m=>m===chm||m.startsWith(chm))}
+  if(k<0){k=models.findIndex(m=>MI[m]&&MI[m].byok)}
+  if(k<0){k=models.indexOf('Sonnet 5.5')}
+  model=k>=0?k:0;let last='';
   const items=models.map((m,i)=>{
     const mi=MI[m]||{},c=PREM[m],g=mi.g||'Free Models',h=g!==last?`<div class="mh">${hx(g)}</div>`:'';last=g;
     const badge=mi.byok?`<span class="lk" style="color:#4fd6a0;font-weight:600">FREE</span>`:(c?`<span class="lk">${CR.n>=c?'✨':'🔒'} ${c}</span>`:`<span class="lk" style="color:#4fd6a0">FREE</span>`);
@@ -442,10 +452,13 @@ function chainUp(){const e=$('#apchain');if(!e)return;e.innerHTML=BK.chain.lengt
 async function loadModels(p){const key=BK.keys[p.id];if(!key){BK.models[p.id]=[];BK.chain=BK.chain.filter(i=>!i.startsWith(p.id+'|'));bsave();cardUp(p);chainUp();menuUp();pst(p.id,'');return}
 pst(p.id,'Loading models…');
 try{const r=await fetch(p.l||p.b+'/models',{headers:{Authorization:'Bearer '+key}});if(!r.ok)throw new Error(r.status);const j=await r.json();
-let ids=(Array.isArray(j)?j:j.data||[]).map(m=>String(m.id).replace(/^models\//,'')).filter(i=>!/whisper|embed|tts|guard|moderat|image|imagen|veo|audio|dall|transcri|rerank|aqa|vision-preview/i.test(i));
-if(p.f)ids=ids.filter(i=>/:free$/.test(i));if(!ids.length)throw new Error('none');BK.models[p.id]=ids.sort();pst(p.id,'Key works ✓ '+ids.length+' models in input box')}
+let ids=(Array.isArray(j)?j:j.data||[]).map(m=>String(m.id).replace(/^models\//,'')).filter(i=>!/whisper|embed|tts|guard|moderat|image|imagen|veo|audio|dall|transcri|rerank|aqa|vision-preview|deep-research|interaction|computer-use|live|realtime/i.test(i));
+if(p.id==='google'){ids=ids.filter(i=>/^gemini-(1\.5|2\.0|2\.5)/.test(i)&&!/experimental-vision|preview-embed/i.test(i))}
+if(p.f)ids=ids.filter(i=>/:free$/.test(i));if(!ids.length)throw new Error('none');
+if(p.id==='google'){ids.sort((a,b)=>a.includes('2.0-flash')?-1:b.includes('2.0-flash')?1:a.localeCompare(b))}else{ids.sort()}
+BK.models[p.id]=ids;pst(p.id,'Key works ✓ '+ids.length+' models in input box')}
 catch(e){if(p.s){BK.models[p.id]=p.s;pst(p.id,'Default list active ✓ in input box')}else{BK.models[p.id]=[];pst(p.id,'Could not load models. Check the key.')}}
-if(BK.models[p.id].length&&!PP.includes(p.id)&&!BK.chain.some(i=>i.startsWith(p.id+'|'))){const ms=BK.models[p.id];BK.chain.push(p.id+'|'+(ms.find(m=>/flash|3\.3-70b|gpt-4o$|large|deepseek|llama/i.test(m))||ms[0]))}
+if(BK.models[p.id].length&&!PP.includes(p.id)&&!BK.chain.some(i=>i.startsWith(p.id+'|'))){const ms=BK.models[p.id];BK.chain.push(p.id+'|'+(ms.find(m=>/2\.0-flash|flash|3\.3-70b|gpt-4o$|large|deepseek|llama/i.test(m))||ms[0]))}
 bsave();cardUp(p);chainUp();menuUp()}
 function openApi(){let m=$('#apm');if(!m){m=document.createElement('div');m.id='apm';
 m.innerHTML=`<div class="apc" role="dialog" aria-label="API keys"><div class="aph"><h3>Bring your own key</h3><button class="ghost" id="apx" type="button">✕</button></div><p class="apn">Add a free key from any provider. Keys stay permanently in this browser. All models appear in your input box under Free Models!</p><div class="apg">${PV.map(p=>`<div class="pc" data-p="${p.id}" style="--i:${PV.indexOf(p)}"><div class="pt"><b>${p.n}</b><span class="pb"></span></div><div class="pd">${p.d}</div><div class="pr"><a href="${p.k}" target="_blank" rel="noopener">Get key ↗</a><input type="password" placeholder="Paste key" autocomplete="off" spellcheck="false" aria-label="${p.n} key"></div><div class="ps"></div><div class="pm"></div></div>`).join('')}</div><h4>Fallback chain</h4><div id="apchain"></div></div>`;document.body.appendChild(m);
@@ -461,7 +474,14 @@ async function callOne(p,key,model,msgs,signal,cb){
 const headers={'Content-Type':'application/json',Authorization:'Bearer '+key};
 if(p.id==='openrouter'){headers['HTTP-Referer']=window.location.origin||'http://localhost:3000';headers['X-Title']='Ember'}
 const r=await fetch(p.b+'/chat/completions',{method:'POST',signal,headers,body:JSON.stringify({model,messages:msgs,stream:true})});
-if(!r.ok){let t='';try{t=(await r.text()).slice(0,120)}catch{}throw new Error(r.status+' '+t)}
+if(!r.ok){
+  let raw='',errMsg='';
+  try{raw=await r.text();const j=JSON.parse(raw);const errObj=Array.isArray(j)?(j[0]?.error||j[0]):(j.error||j);errMsg=(errObj&&(errObj.message||errObj.code))||raw}catch{errMsg=raw}
+  if(/interactions api/i.test(errMsg)){throw new Error('This model requires Google Interactions API. Please switch to "gemini-2.0-flash" or "gemini-1.5-flash" in the model selector.')}
+  if(r.status===429||/quota|exceeded|insufficient_quota/i.test(errMsg)){throw new Error('Quota Exceeded (429): Your '+p.n+' key ran out of credits or hit its rate limit. You can get a free key from Google AI Studio or Groq under ⚡ API.')}
+  if(r.status===401||/invalid.*key|unauthorized/i.test(errMsg)){throw new Error('Invalid API Key (401): Please verify your '+p.n+' key under ⚡ API.')}
+  throw new Error((p.n||'Provider')+' ('+r.status+'): '+errMsg.slice(0,180));
+}
 const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
 for(;;){const{done,value}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});const ls=buf.split(/\r?\n/);buf=ls.pop();
 for(const l of ls){if(!l.startsWith('data:'))continue;const d=l.slice(5).trim();if(d==='[DONE]')return;try{const j=JSON.parse(d);const t=j.choices?.[0]?.delta?.content;if(t)cb(t)}catch{}}}}
@@ -502,6 +522,11 @@ const d=add(m.r,u?`<div class="b">${im}${esc(m.t)}</div>`:'<div class="av"></div
 const thumb=b=>createImageBitmap(b).then(im=>{const s=Math.min(1,160/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.7)}).catch(()=>null);
 function send(){const v=ta.value.trim();if(!v&&!files.length||busy)return;stopRec();
 const curMod=models[model],mi=MI[curMod]||{},c=PREM[curMod];
+if(!mi.byok&&!mi.id&&!window.claude&&!keyed().length){
+  openApi();
+  toast('⚡ Please add a free API key (like Google AI Studio or Groq) to start chatting!');
+  return;
+}
 if(!mi.byok&&c&&CR.n<c){openEarn(curMod);return}
 const blobs=files.map(a=>a.f),n=blobs.length;ta.value='';files=[];thumbs();exp=false;ta.blur();menu.classList.remove('open');
 if(!document.body.classList.contains('chatting')){dock.appendChild(pi);document.body.classList.add('chatting')}
@@ -522,9 +547,13 @@ const opt={cache:false,signal:ctl.signal,modelTier:tier,effort:efl,onText:({text
 if(blobs&&blobs.length){try{const l=await sample.limits();if(l.images)opt.images=blobs.slice(0,l.images.maxCount||blobs.length)}catch{}}
 const r=await sample(turns,opt);out=r.text||out;b.innerHTML=md(out);
 if(out){if(!mi.byok)spend(mod);c.m.push({r:'a',t:out});save();actsFor(a,ACT.copy+ACT.rg);sc();autoPv(out);title(c,mi.byok?sample:(mi.id?await getSample():sample))}}
-catch(e){out=(e&&e.text)||out;const k=e&&e.code,M={not_granted:'Ember needs your permission to ask Claude. Reload and tap Allow when asked.',rate_limited:'Too many requests right now. Wait a moment and try again.',unavailable:'Real replies only work when this page is opened inside Claude or with an API key.',noastra:'GPT Astra-6 is not connected yet. Add its provider key under ⚡ API. No credits were used.',nocredit:'Not enough credits. Earn more, then try again.',nokey:'Add your '+((e&&e.pn)||'provider')+' key under ⚡ API to use this model. No credits were used.'};
+catch(e){out=(e&&e.text)||out;const k=e&&e.code,M={not_granted:'Ember needs your permission to ask Claude. Reload and tap Allow when asked.',rate_limited:'Too many requests right now. Wait a moment and try again.',unavailable:'⚡ Please add a free API key (like Google AI Studio or Groq) under ⚡ API to chat with this model.',noastra:'GPT Astra-6 is not connected yet. Add its provider key under ⚡ API. No credits were used.',nocredit:'Not enough credits. Earn more, then try again.',nokey:'Add your '+((e&&e.pn)||'provider')+' key under ⚡ API to use this model. No credits were used.'};
 const note=k==='cancelled'?(out?'':'Stopped.'):(M[k]||(e&&e.message)||'Something went wrong. Please check your API key under ⚡ API.');
-b.innerHTML=md(out+(out&&note?'\n\n':'')+note);if(out){c.m.push({r:'a',t:out});save();actsFor(a,ACT.copy+ACT.rg)}else actsFor(a,ACT.rt)}
+b.innerHTML=md(out+(out&&note?'\n\n':'')+note);
+if(!out&&(k==='unavailable'||k==='nokey'||(e&&e.message&&/api key|quota|interactions api/i.test(e.message)))){
+  b.insertAdjacentHTML('beforeend',`<div style="margin-top:10px"><button type="button" class="chip" onclick="openApi()" style="cursor:pointer;border-color:var(--acc);color:var(--acc)">⚡ Open API Settings</button></div>`);
+}
+if(out){c.m.push({r:'a',t:out});save();actsFor(a,ACT.copy+ACT.rg)}else actsFor(a,ACT.rt)}
 finally{b.classList.remove('live');busy=false;ctl=null;layout();hist()}})()}
 async function exportChat(id){const c=chats.find(x=>x.id===id);if(!c)return;const t='# '+c.title+'\n\n'+c.m.map(m=>(m.r==='u'?'**You**':'**Ember**')+'\n\n'+m.t).join('\n\n---\n\n')+'\n';
 try{const d=await claude.use('downloads');if(!d)throw 0;await d.save({filename:(c.title.replace(/[^\w\- ]+/g,'').trim().slice(0,40)||'chat')+'.md',data:t})}catch{copy(t)}}

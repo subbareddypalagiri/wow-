@@ -206,13 +206,13 @@ body.light .apc{background:#fffaf2}
 .ar{display:flex;align-items:center;gap:6px;border:1px solid var(--bd);border-radius:12px;background:rgba(255,255,255,.04);animation:apin .3s var(--ease) both;transition:border-color .2s}.ar:hover{border-color:rgba(255,117,0,.4)}
 .ao{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 14px}.ao b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ao span{font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ax{padding:8px 12px;color:var(--mut)}.ax:hover{color:#ff6b5e}
 .pf{width:100%;display:flex;flex-direction:column;gap:8px;align-items:stretch}.pf input,.pf textarea{padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:rgba(255,255,255,.06);color:var(--fg);font:inherit;font-size:14px;resize:vertical}.pf textarea{min-height:72px}.pf input:focus,.pf textarea:focus{outline:0;border-color:var(--acc)}
-.menu{width:min(210px,78vw)}.menu .lk{margin-left:auto;font-size:11px;color:var(--mut)}
+.menu{width:min(290px,86vw);max-height:min(380px,60vh);overflow-y:auto;scrollbar-width:thin}.menu .lk{margin-left:auto;font-size:11px;color:var(--mut);flex-shrink:0}
 #crBtn{margin-left:8px;color:var(--hi);border:1px solid var(--bd);background:rgba(255,255,255,.05);white-space:nowrap}#crBtn+#apiBtn{margin-left:8px}
 #erm{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:16px}#erm.open{display:flex;animation:apfade .25s}
 #erm .apc{width:min(540px,100%)}#erm .apg{grid-template-columns:1fr}
 .pf select{padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:#1b1510;color:var(--fg);font:inherit;font-size:14px}body.light .pf select{background:#fff}
 #erm .chip:disabled{opacity:.6}
-.menu{width:min(250px,80vw);max-height:min(340px,55vh);overflow-y:auto;scrollbar-width:thin}.menu .mh{padding:8px 10px 2px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.menu .mh{padding:8px 10px 3px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);position:sticky;top:0;background:rgba(24,18,13,.98);z-index:2}body.light .menu .mh{background:rgba(255,252,247,.98)}
 .menu button{flex:none;overflow:hidden}.menu .mn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.menu button:hover{background:rgba(255,255,255,.09)}body.light .menu button:hover{background:rgba(0,0,0,.06)}
 @media(max-width:600px){#erm{align-items:flex-end;padding:0}#erm .apc{width:100%;max-height:88%;border-radius:22px 22px 0 0}}
 </style>
@@ -334,27 +334,85 @@ gl.uniform3f(u('uBg'),0,0,0);gl.uniform3f(u('uBase'),0,0,0);gl.uniform3f(u('uAcc
 for(const n in f1)gl.uniform1f(u(n),f1[n]);gl.drawArrays(gl.TRIANGLES,0,3);requestAnimationFrame(r)})(last);
 })();
 /* ---------- Prompt input ---------- */
-const models=['Fable 5.1','GPT Astra-6','Opus 5.5','Sonnet 5.5','Haiku 5.5'],efforts=['Low','Medium','Max Effort'];
-let model=3,ef=1,files=[],exp=false,rec=false,busy=false,ctl=null,recog=null,tmr=null,wtm=null;
+/* ---------- Models, BYOK and Providers ---------- */
+const PREM={},MI={};
+let CR={n:0},SRV=[],ON=false,etm=null;
+const PV=[
+{id:'google',n:'Google AI Studio',b:'https://generativelanguage.googleapis.com/v1beta/openai',k:'https://aistudio.google.com/apikey',d:'Gemini 2.0 Flash, 1.5 Flash, 2.5 Flash (100% Free)',s:['gemini-2.0-flash','gemini-1.5-flash','gemini-2.0-flash-lite','gemini-1.5-pro','gemini-2.5-flash','gemini-2.5-pro']},
+{id:'groq',n:'Groq Cloud',b:'https://api.groq.com/openai/v1',k:'https://console.groq.com/keys',d:'Llama 3.3 70B, Qwen, Gemma, DeepSeek distills (14.4k/day free)',s:['llama-3.3-70b-versatile','llama-3.1-8b-instant','deepseek-r1-distill-llama-70b','qwen-2.5-32b','mixtral-8x7b-32768','gemma2-9b-it']},
+{id:'openrouter',n:'OpenRouter Free',b:'https://openrouter.ai/api/v1',k:'https://openrouter.ai/keys',d:'Free DeepSeek, Qwen, Llama and more',f:1,s:['deepseek/deepseek-r1:free','meta-llama/llama-3.3-70b-instruct:free','google/gemini-2.0-flash-exp:free','qwen/qwen-2.5-72b-instruct:free','mistralai/mistral-7b-instruct:free']},
+{id:'mistral',n:'Mistral AI',b:'https://api.mistral.ai/v1',k:'https://console.mistral.ai/api-keys',d:'Mistral Large, Ministral, Codestral, Nemo',s:['mistral-large-latest','codestral-latest','mistral-small-latest','ministral-8b-latest']},
+{id:'cerebras',n:'Cerebras',b:'https://api.cerebras.ai/v1',k:'https://cloud.cerebras.ai',d:'Llama 3.1 8B, Llama 3.3 70B at huge speed',s:['llama3.1-8b','llama3.3-70b']},
+{id:'github',n:'GitHub Models',b:'https://models.github.ai/inference',l:'https://models.github.ai/catalog/models',k:'https://github.com/settings/tokens',d:'GPT-4o, Phi-4, Mistral, Codestral',s:['openai/gpt-4o','openai/gpt-4o-mini','microsoft/Phi-4','mistral-ai/Codestral-2501']},
+{id:'openai',n:'OpenAI',b:'https://api.openai.com/v1',k:'https://platform.openai.com/api-keys',d:'GPT-4o, GPT-4o-mini, o3-mini',s:['gpt-4o','gpt-4o-mini','o3-mini']},
+{id:'deepseek',n:'DeepSeek',b:'https://api.deepseek.com/v1',k:'https://platform.deepseek.com/api_keys',d:'DeepSeek-V3, DeepSeek-R1',s:['deepseek-chat','deepseek-reasoner']},
+{id:'xai',n:'xAI',b:'https://api.x.ai/v1',k:'https://console.x.ai',d:'Grok 2, Grok 3',s:['grok-2','grok-2-mini']}];
+const PP=[];
+let BK={keys:{},models:{},chain:[]};try{
+  Object.assign(BK,JSON.parse(localStorage.getItem('ember.byok')||'{}'));
+  if(BK.models&&BK.models.google)BK.models.google=BK.models.google.filter(i=>!/deep-research|interaction|computer-use|live/i.test(i));
+  if(BK.chain)BK.chain=BK.chain.filter(i=>!/deep-research|interaction|computer-use|live/i.test(i));
+}catch{}
+const bsave=()=>{try{localStorage.setItem('ember.byok',JSON.stringify(BK))}catch{}};
+const hx=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const keyed=()=>BK.chain.filter(i=>BK.keys[i.split('|')[0]]&&!PP.includes(i.split('|')[0]));
+const short=id=>{const[p,...m]=id.split('|');return m.join('|').split('/').pop().replace(':free','')};
+
+function buildModels(){
+  const out=[],seen=new Set();
+  Object.keys(PREM).forEach(k=>delete PREM[k]);Object.keys(MI).forEach(k=>delete MI[k]);
+  PV.forEach(p=>{
+    const ms=BK.models[p.id]||(BK.keys[p.id]&&p.s?p.s:[]);
+    if(ms&&ms.length){
+      ms.forEach(mId=>{
+        let nm=mId;if(seen.has(nm))nm+=' · '+p.n;if(seen.has(nm))return;
+        seen.add(nm);out.push(nm);MI[nm]={g:p.n+' (Free)',pid:p.id,model:mId,byok:true};
+      });
+    }
+  });
+  SRV.forEach(m=>{
+    let nm=m.label||m.id;if(seen.has(nm))nm+=' · '+m.group;if(seen.has(nm))return;
+    seen.add(nm);out.push(nm);MI[nm]={g:m.group+' (Server)',id:m.id};PREM[nm]=m.estCredits;
+  });
+  ['Sonnet 5.5','Haiku 5.5'].forEach(n=>{
+    if(!seen.has(n)){seen.add(n);out.push(n);MI[n]={g:window.claude?'Claude Native':'Claude (Artifact)'}}
+  });
+  models.length=0;out.forEach(n=>models.push(n));
+}
+
+const models=['Sonnet 5.5','Haiku 5.5'],efforts=['Low','Medium','Max Effort'];
+let model=0,ef=1,files=[],exp=false,rec=false,busy=false,ctl=null,recog=null,tmr=null,wtm=null;
 const pi=$('#pi'),ta=$('#ta'),card=$('#card'),tray=$('#tray'),trayw=$('#trayw'),act=$('#act'),fin=$('#fin'),menu=$('#menu');
 const has=()=>ta.value.trim()||files.length;
 function setTxt(el,t){if(el.textContent!==t){el.textContent=t;el.classList.remove('k');void el.offsetWidth;el.classList.add('k')}}
 function layout(){ta.style.height='0px';const sh=ta.scrollHeight,h=Math.max(68,Math.min(sh,160));ta.style.height=h+'px';ta.style.overflowY=sh>160?'auto':'hidden';
 card.style.height=(exp?Math.max(116,h+48):48)+'px';pi.classList.toggle('exp',exp);pi.classList.toggle('rec',rec);
 trayw.style.height=files.length&&exp?'68px':'0';act.dataset.s=rec||busy?'stop':has()?'send':'mic';
-setTxt($('#mt'),models[model]);setTxt($('#et'),efforts[ef]);$('#b2').style.opacity=ef>=1?1:.3;$('#b3').style.opacity=ef>=2?1:.3}
-function menuUp(){const keep=models[model];buildModels();const k=models.indexOf(keep);model=k>=0?k:(models.indexOf('Sonnet 5.5')>=0?models.indexOf('Sonnet 5.5'):0);let last='';
-const items=models.map((m,i)=>{const mi=MI[m]||{},c=PREM[m],g=mi.g||'Free Models',h=g!==last?`<div class="mh">${hx(g)}</div>`:'';last=g;const badge=mi.byok?`<span class="lk" style="color:#4fd6a0;font-weight:600">FREE</span>`:(c?`<span class="lk">${CR.n>=c?'✨':'🔒'} ${c}</span>`:`<span class="lk" style="color:#4fd6a0">FREE</span>`);return h+`<button type="button" role="radio" data-i="${i}"><span class="dot"></span><span class="mn">${hx(m)}</span>${badge}</button>`}).join('');
-const addKeyAction=`<div class="mh" style="border-top:1px solid var(--bd);margin-top:6px;padding-top:6px">BYOK Keys</div><button type="button" id="menuAddKey" style="color:var(--acc);font-weight:600;display:flex;align-items:center;gap:6px;width:100%;padding:0 10px;height:32px;border-radius:12px;font-size:13px"><span class="dot" style="background:var(--acc)"></span><span class="mn">+ Add / Manage API Keys</span></button>`;
-menu.innerHTML=items+addKeyAction;marks();layout()}
+setTxt($('#mt'),models[model]||'Free Models');setTxt($('#et'),efforts[ef]);$('#b2').style.opacity=ef>=1?1:.3;$('#b3').style.opacity=ef>=2?1:.3}
+function menuUp(){
+  const keep=models[model];buildModels();
+  let k=keep?models.indexOf(keep):-1;
+  if(k<0&&BK.chain.length){const chm=BK.chain[0].split('|').slice(1).join('|');k=models.findIndex(m=>m===chm||m.startsWith(chm))}
+  if(k<0){k=models.findIndex(m=>MI[m]&&MI[m].byok)}
+  if(k<0){k=models.indexOf('Sonnet 5.5')}
+  model=k>=0?k:0;let last='';
+  const items=models.map((m,i)=>{
+    const mi=MI[m]||{},c=PREM[m],g=mi.g||'Free Models',h=g!==last?`<div class="mh">${hx(g)}</div>`:'';last=g;
+    const badge=mi.byok?`<span class="lk" style="color:#4fd6a0;font-weight:600">FREE</span>`:(c?`<span class="lk">${CR.n>=c?'✨':'🔒'} ${c}</span>`:`<span class="lk" style="color:#4fd6a0">FREE</span>`);
+    return h+`<button type="button" role="radio" data-i="${i}"><span class="dot"></span><span class="mn">${hx(m)}</span>${badge}</button>`
+  }).join('');
+  const addKeyAction=`<div class="mh" style="border-top:1px solid var(--bd);margin-top:6px;padding-top:6px">BYOK Keys</div><button type="button" id="menuAddKey" style="color:var(--acc);font-weight:600;display:flex;align-items:center;gap:6px;width:100%;padding:0 10px;height:32px;border-radius:12px;font-size:13px"><span class="dot" style="background:var(--acc)"></span><span class="mn">+ Add / Manage API Keys</span></button>`;
+  menu.innerHTML=items+addKeyAction;marks();layout()
+}
 function marks(){menu.querySelectorAll('button[data-i]').forEach((b,i)=>b.setAttribute('aria-checked',i===model))}
 menu.onclick=e=>{
-if(e.target.closest('#menuAddKey')){menu.classList.remove('open');$('#mb').classList.remove('on');openApi();return}
-const b=e.target.closest('button[data-i]');if(!b)return;
-const i=+b.dataset.i,m=models[i],mi=MI[m]||{},c=PREM[m];
-menu.classList.remove('open');$('#mb').classList.remove('on');
-if(!mi.byok&&c&&CR.n<c){openEarn(m);return}
-model=i;marks();layout()};
+  if(e.target.closest('#menuAddKey')){menu.classList.remove('open');$('#mb').classList.remove('on');openApi();return}
+  const b=e.target.closest('button[data-i]');if(!b)return;
+  const i=+b.dataset.i,m=models[i],mi=MI[m]||{},c=PREM[m];
+  menu.classList.remove('open');$('#mb').classList.remove('on');
+  if(!mi.byok&&c&&CR.n<c){openEarn(m);return}
+  model=i;marks();layout()
+};
 $('#mb').onclick=()=>{menu.classList.toggle('open');$('#mb').classList.toggle('on')};
 $('#eb').onclick=()=>{ef=(ef+1)%3;layout()};
 document.addEventListener('mousedown',e=>{if(!menu.contains(e.target)&&!$('#mb').contains(e.target)){menu.classList.remove('open');$('#mb').classList.remove('on')}});
@@ -384,56 +442,55 @@ if(!SR)return sim();
 try{recog=new SR();recog.continuous=true;recog.interimResults=true;let base=ta.value;
 recog.onresult=e=>{let it='',fi='';for(let k=e.resultIndex;k<e.results.length;k++){const t=e.results[k][0].transcript;e.results[k].isFinal?fi+=t:it+=t}if(fi)base+=(base?' ':'')+fi;ta.value=(base+(it?' '+it:'')).trim();layout()};
 recog.onerror=()=>{stopRec();};recog.onend=stopRec;recog.start()}catch{recog=null;sim()}};
-/* ---------- BYOK ---------- */
-const PV=[
-{id:'google',n:'Google AI Studio',b:'https://generativelanguage.googleapis.com/v1beta/openai',k:'https://aistudio.google.com/apikey',d:'Gemini 2.5 Pro, Flash and more',s:['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-flash','gemini-1.5-pro']},
-{id:'groq',n:'Groq Cloud',b:'https://api.groq.com/openai/v1',k:'https://console.groq.com/keys',d:'Llama 3.3 70B, Qwen, Gemma, DeepSeek distills',s:['llama-3.3-70b-versatile','llama-3.1-8b-instant','deepseek-r1-distill-llama-70b','qwen-2.5-32b','mixtral-8x7b-32768','gemma2-9b-it']},
-{id:'github',n:'GitHub Models',b:'https://models.github.ai/inference',l:'https://models.github.ai/catalog/models',k:'https://github.com/settings/tokens',d:'GPT-4o, Phi-4, Mistral, Codestral',s:['openai/gpt-4o','openai/gpt-4o-mini','microsoft/Phi-4','mistral-ai/Codestral-2501']},
-{id:'openrouter',n:'OpenRouter Free',b:'https://openrouter.ai/api/v1',k:'https://openrouter.ai/keys',d:'Free DeepSeek, Qwen, Llama and more',f:1,s:['deepseek/deepseek-r1:free','meta-llama/llama-3.3-70b-instruct:free','google/gemini-2.0-flash-exp:free','qwen/qwen-2.5-72b-instruct:free','mistralai/mistral-7b-instruct:free']},
-{id:'mistral',n:'Mistral AI',b:'https://api.mistral.ai/v1',k:'https://console.mistral.ai/api-keys',d:'Mistral Large, Ministral, Codestral, Nemo',s:['mistral-large-latest','codestral-latest','mistral-small-latest','ministral-8b-latest']},
-{id:'cerebras',n:'Cerebras',b:'https://api.cerebras.ai/v1',k:'https://cloud.cerebras.ai',d:'Llama 3.1 8B, Llama 3.3 70B at huge speed',s:['llama3.1-8b','llama3.3-70b']},
-{id:'openai',n:'OpenAI',b:'https://api.openai.com/v1',k:'https://platform.openai.com/api-keys',d:'Premium · GPT-5, GPT-4.1, o3, o4-mini',s:['gpt-5','gpt-5-mini','gpt-4.1','gpt-4o','o3','o4-mini']},
-{id:'xai',n:'xAI',b:'https://api.x.ai/v1',k:'https://console.x.ai',d:'Premium · Grok 4, Grok 3',s:['grok-4','grok-3','grok-3-mini']},
-{id:'deepseek',n:'DeepSeek',b:'https://api.deepseek.com/v1',k:'https://platform.deepseek.com/api_keys',d:'Premium · DeepSeek Chat, Reasoner',s:['deepseek-chat','deepseek-reasoner']},
-{id:'together',n:'Together AI',b:'https://api.together.xyz/v1',k:'https://api.together.ai/settings/api-keys',d:'Premium · open models of every size'},
-{id:'fireworks',n:'Fireworks AI',b:'https://api.fireworks.ai/inference/v1',k:'https://fireworks.ai/account/api-keys',d:'Premium · fast open models'},
-{id:'perplexity',n:'Perplexity',b:'https://api.perplexity.ai',k:'https://www.perplexity.ai/settings/api',d:'Premium · Sonar with web search',s:['sonar','sonar-pro','sonar-reasoning-pro']},
-{id:'cohere',n:'Cohere',b:'https://api.cohere.ai/compatibility/v1',k:'https://dashboard.cohere.com/api-keys',d:'Premium · Command A, Command R+',s:['command-a-03-2025','command-r-plus']}];
-const PP=['openai','xai','deepseek','together','fireworks','perplexity','cohere'];
-let BK={keys:{},models:{},chain:[]};try{Object.assign(BK,JSON.parse(localStorage.getItem('ember.byok')||'{}'))}catch{}
-const bsave=()=>{try{localStorage.setItem('ember.byok',JSON.stringify(BK))}catch{}};
-const hx=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const keyed=()=>BK.chain.filter(i=>BK.keys[i.split('|')[0]]&&!PP.includes(i.split('|')[0]));
-const short=id=>{const[p,...m]=id.split('|');return m.join('|').split('/').pop().replace(':free','')};
 function toast(t){let e=$('#tst');if(!e){e=document.createElement('div');e.id='tst';document.body.appendChild(e)}e.textContent=t;e.style.display='block';clearTimeout(e.t);e.t=setTimeout(()=>e.style.display='none',6000)}
 function btn(){const k=keyed(),b=$('#apiBtn');try{menuUp()}catch{}b.classList.toggle('on',!!k.length);b.textContent='⚡ '+(k.length?short(k[0])+(k.length>1?' +'+(k.length-1):''):'API')}
 const pst=(id,t)=>{const e=document.querySelector(`.pc[data-p="${id}"] .ps`);if(e)e.textContent=t};
-function cardUp(p){const c=document.querySelector(`.pc[data-p="${p.id}"]`),ms=BK.models[p.id]||[],b=c.querySelector('.pb');
+function cardUp(p){const c=document.querySelector(`.pc[data-p="${p.id}"]`);if(!c)return;const ms=BK.models[p.id]||[],b=c.querySelector('.pb');
 b.style.display=ms.length?'inline-block':'none';b.textContent=ms.length+(p.f?' Free Models':' Models');c.classList.toggle('ok',ms.length>0);
 c.querySelector('.pm').innerHTML=PP.includes(p.id)?'':ms.map(m=>`<button type="button" class="mc${BK.chain.includes(p.id+'|'+m)?' on':''}" data-m="${hx(m)}">${hx(m)}</button>`).join('')}
-function chainUp(){const e=$('#apchain');e.innerHTML=BK.chain.length?BK.chain.map((id,i)=>{const p=PV.find(x=>x.id===id.split('|')[0]);return `<div class="ci"><span>${i+1}</span><b>${hx(p.n)} · ${hx(id.split('|').slice(1).join('|'))}</b>${i?`<button type="button" data-u="${i}" aria-label="Move up">↑</button>`:''}<button type="button" data-x="${i}" aria-label="Remove">×</button></div>`}).join(''):'<div class="pd">Pick models above. They run in this order — if one fails (rate limit, error), the next one takes over.</div>';btn()}
-async function loadModels(p){const key=BK.keys[p.id];if(!key){BK.models[p.id]=[];BK.chain=BK.chain.filter(i=>!i.startsWith(p.id+'|'));bsave();cardUp(p);chainUp();pst(p.id,'');return}
+function chainUp(){const e=$('#apchain');if(!e)return;e.innerHTML=BK.chain.length?BK.chain.map((id,i)=>{const p=PV.find(x=>x.id===id.split('|')[0]);return `<div class="ci"><span>${i+1}</span><b>${hx(p?p.n:id)} · ${hx(id.split('|').slice(1).join('|'))}</b>${i?`<button type="button" data-u="${i}" aria-label="Move up">↑</button>`:''}<button type="button" data-x="${i}" aria-label="Remove">×</button></div>`}).join(''):'<div class="pd">Pick models above. They run in this order — if one fails (rate limit, error), the next one takes over.</div>';btn()}
+async function loadModels(p){const key=BK.keys[p.id];if(!key){BK.models[p.id]=[];BK.chain=BK.chain.filter(i=>!i.startsWith(p.id+'|'));bsave();cardUp(p);chainUp();menuUp();pst(p.id,'');return}
 pst(p.id,'Loading models…');
 try{const r=await fetch(p.l||p.b+'/models',{headers:{Authorization:'Bearer '+key}});if(!r.ok)throw new Error(r.status);const j=await r.json();
-let ids=(Array.isArray(j)?j:j.data||[]).map(m=>String(m.id).replace(/^models\//,'')).filter(i=>!/whisper|embed|tts|guard|moderat|image|imagen|veo|audio|dall|transcri|rerank|aqa|vision-preview/i.test(i));
-if(p.f)ids=ids.filter(i=>/:free$/.test(i));if(!ids.length)throw new Error('none');BK.models[p.id]=ids.sort();pst(p.id,'Key works ✓ pick models below')}
-catch(e){if(p.s){BK.models[p.id]=p.s;pst(p.id,'Using default list (live list blocked)')}else{BK.models[p.id]=[];pst(p.id,'Could not load models. Check the key.')}}
-if(BK.models[p.id].length&&!PP.includes(p.id)&&!BK.chain.some(i=>i.startsWith(p.id+'|'))){const ms=BK.models[p.id];BK.chain.push(p.id+'|'+(ms.find(m=>/flash|3\.3-70b|gpt-4o$|large|deepseek|llama/i.test(m))||ms[0]))}
-bsave();cardUp(p);chainUp()}
+let ids=(Array.isArray(j)?j:j.data||[]).map(m=>String(m.id).replace(/^models\//,'')).filter(i=>!/whisper|embed|tts|guard|moderat|image|imagen|veo|audio|dall|transcri|rerank|aqa|vision-preview|deep-research|interaction|computer-use|live|realtime/i.test(i));
+if(p.id==='google'){ids=ids.filter(i=>/^gemini-(1\.5|2\.0|2\.5)/.test(i)&&!/experimental-vision|preview-embed/i.test(i))}
+if(p.f)ids=ids.filter(i=>/:free$/.test(i));if(!ids.length)throw new Error('none');
+if(p.id==='google'){ids.sort((a,b)=>a.includes('2.0-flash')?-1:b.includes('2.0-flash')?1:a.localeCompare(b))}else{ids.sort()}
+BK.models[p.id]=ids;pst(p.id,'Key works ✓ '+ids.length+' models in input box')}
+catch(e){if(p.s){BK.models[p.id]=p.s;pst(p.id,'Default list active ✓ in input box')}else{BK.models[p.id]=[];pst(p.id,'Could not load models. Check the key.')}}
+if(BK.models[p.id].length&&!PP.includes(p.id)&&!BK.chain.some(i=>i.startsWith(p.id+'|'))){const ms=BK.models[p.id];BK.chain.push(p.id+'|'+(ms.find(m=>/2\.0-flash|flash|3\.3-70b|gpt-4o$|large|deepseek|llama/i.test(m))||ms[0]))}
+bsave();cardUp(p);chainUp();menuUp()}
 function openApi(){let m=$('#apm');if(!m){m=document.createElement('div');m.id='apm';
-m.innerHTML=`<div class="apc" role="dialog" aria-label="API keys"><div class="aph"><h3>Bring your own key</h3><button class="ghost" id="apx" type="button">✕</button></div><p class="apn">Add a free key from any provider. Keys stay in this browser only. Ember tries your chain in order and falls back to the next model if one fails.</p><div class="apg">${PV.map(p=>`<div class="pc" data-p="${p.id}" style="--i:${PV.indexOf(p)}"><div class="pt"><b>${p.n}</b><span class="pb"></span></div><div class="pd">${p.d}</div><div class="pr"><a href="${p.k}" target="_blank" rel="noopener">Get key ↗</a><input type="password" placeholder="Paste key" autocomplete="off" spellcheck="false" aria-label="${p.n} key"></div><div class="ps"></div><div class="pm"></div></div>`).join('')}</div><h4>Fallback chain</h4><div id="apchain"></div></div>`;document.body.appendChild(m);
+m.innerHTML=`<div class="apc" role="dialog" aria-label="API keys"><div class="aph"><h3>Bring your own key</h3><button class="ghost" id="apx" type="button">✕</button></div><p class="apn">Add a free key from any provider. Keys stay permanently in this browser. All models appear in your input box under Free Models!</p><div class="apg">${PV.map(p=>`<div class="pc" data-p="${p.id}" style="--i:${PV.indexOf(p)}"><div class="pt"><b>${p.n}</b><span class="pb"></span></div><div class="pd">${p.d}</div><div class="pr"><a href="${p.k}" target="_blank" rel="noopener">Get key ↗</a><input type="password" placeholder="Paste key" autocomplete="off" spellcheck="false" aria-label="${p.n} key"></div><div class="ps"></div><div class="pm"></div></div>`).join('')}</div><h4>Fallback chain</h4><div id="apchain"></div></div>`;document.body.appendChild(m);
 m.onclick=e=>{if(e.target===m||e.target.id==='apx')m.classList.remove('open')};
 m.querySelectorAll('.pc').forEach(c=>{const p=PV.find(x=>x.id===c.dataset.p),inp=c.querySelector('input');inp.value=BK.keys[p.id]||'';let t;
 inp.oninput=()=>{BK.keys[p.id]=inp.value.trim();bsave();clearTimeout(t);t=setTimeout(()=>loadModels(p),600)};
-c.querySelector('.pm').onclick=e=>{const b=e.target.closest('.mc');if(!b)return;const id=p.id+'|'+b.dataset.m,i=BK.chain.indexOf(id);i<0?BK.chain.push(id):BK.chain.splice(i,1);bsave();cardUp(p);chainUp()};cardUp(p);if(BK.keys[p.id]&&!(BK.models[p.id]||[]).length)loadModels(p)});
-$('#apchain').onclick=e=>{const u=e.target.closest('[data-u]'),x=e.target.closest('[data-x]');if(u){const i=+u.dataset.u;[BK.chain[i-1],BK.chain[i]]=[BK.chain[i],BK.chain[i-1]]}else if(x)BK.chain.splice(+x.dataset.x,1);else return;bsave();PV.forEach(cardUp);chainUp()};chainUp()}
+c.querySelector('.pm').onclick=e=>{const b=e.target.closest('.mc');if(!b)return;const id=p.id+'|'+b.dataset.m,i=BK.chain.indexOf(id);i<0?BK.chain.push(id):BK.chain.splice(i,1);bsave();cardUp(p);chainUp();menuUp()};cardUp(p);if(BK.keys[p.id]&&!(BK.models[p.id]||[]).length)loadModels(p)});
+$('#apchain').onclick=e=>{const u=e.target.closest('[data-u]'),x=e.target.closest('[data-x]');if(u){const i=+u.dataset.u;[BK.chain[i-1],BK.chain[i]]=[BK.chain[i],BK.chain[i-1]]}else if(x)BK.chain.splice(+x.dataset.x,1);else return;bsave();PV.forEach(cardUp);chainUp();menuUp()};chainUp()}
+m.querySelectorAll('.pc').forEach(c=>{const p=PV.find(x=>x.id===c.dataset.p);if(p){c.querySelector('input').value=BK.keys[p.id]||'';cardUp(p)}});
 requestAnimationFrame(()=>m.classList.add('open'))}
 $('#apiBtn').onclick=openApi;addEventListener('keydown',e=>{if(e.key==='Escape'){const m=$('#apm');m&&m.classList.remove('open')}});btn();
-async function callOne(p,key,model,msgs,signal,cb){const r=await fetch(p.b+'/chat/completions',{method:'POST',signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({model,messages:msgs,stream:true})});
-if(!r.ok){let t='';try{t=(await r.text()).slice(0,100)}catch{}throw new Error(r.status+' '+t)}
+async function callOne(p,key,model,msgs,signal,cb){
+const headers={'Content-Type':'application/json',Authorization:'Bearer '+key};
+if(p.id==='openrouter'){headers['HTTP-Referer']=window.location.origin||'http://localhost:3000';headers['X-Title']='Ember'}
+const r=await fetch(p.b+'/chat/completions',{method:'POST',signal,headers,body:JSON.stringify({model,messages:msgs,stream:true})});
+if(!r.ok){
+  let raw='',errMsg='';
+  try{raw=await r.text();const j=JSON.parse(raw);const errObj=Array.isArray(j)?(j[0]?.error||j[0]):(j.error||j);errMsg=(errObj&&(errObj.message||errObj.code))||raw}catch{errMsg=raw}
+  if(/interactions api/i.test(errMsg)){throw new Error('This model requires Google Interactions API. Please switch to "gemini-2.0-flash" or "gemini-1.5-flash" in the model selector.')}
+  if(r.status===429||/quota|exceeded|insufficient_quota/i.test(errMsg)){throw new Error('Quota Exceeded (429): Your '+p.n+' key ran out of credits or hit its rate limit. You can get a free key from Google AI Studio or Groq under ⚡ API.')}
+  if(r.status===401||/invalid.*key|unauthorized/i.test(errMsg)){throw new Error('Invalid API Key (401): Please verify your '+p.n+' key under ⚡ API.')}
+  throw new Error((p.n||'Provider')+' ('+r.status+'): '+errMsg.slice(0,180));
+}
 const rd=r.body.getReader(),dc=new TextDecoder();let buf='';
-for(;;){const{done,value}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});const ls=buf.split('\n');buf=ls.pop();
-for(const l of ls){if(!l.startsWith('data:'))continue;const d=l.slice(5).trim();if(d==='[DONE]')return;try{const t=JSON.parse(d).choices?.[0]?.delta?.content;if(t)cb(t)}catch{}}}}
+for(;;){const{done,value}=await rd.read();if(done)break;buf+=dc.decode(value,{stream:true});const ls=buf.split(/\r?\n/);buf=ls.pop();
+for(const l of ls){if(!l.startsWith('data:'))continue;const d=l.slice(5).trim();if(d==='[DONE]')return;try{const j=JSON.parse(d);const t=j.choices?.[0]?.delta?.content;if(t)cb(t)}catch{}}}}
+const byokSample=(pid,model)=>async(input,opt={})=>{
+const msgs=typeof input==='string'?[{role:'user',content:input}]:input,p=PV.find(x=>x.id===pid),key=BK.keys[pid];
+if(!p||!key)throw{code:'nokey',pn:p?p.n:'provider'};let out='';
+try{await callOne(p,key,model,msgs,opt.signal,t=>{out+=t;opt.onText&&opt.onText({text:out,delta:t})});
+if(!out)throw{code:'failed'};return{text:out}}
+catch(e){if(e&&e.name==='AbortError')throw{code:'cancelled',text:out};if(out)return{text:out};throw e}};
 async function bsample(input,opt={}){const msgs=typeof input==='string'?[{role:'user',content:input}]:input;let err='';
 for(const id of keyed()){const[pid,...r]=id.split('|'),model=r.join('|'),p=PV.find(x=>x.id===pid);let out='';
 try{await callOne(p,BK.keys[pid],model,msgs,opt.signal,t=>{out+=t;opt.onText&&opt.onText({text:out,delta:t})});
@@ -465,6 +522,11 @@ const d=add(m.r,u?`<div class="b">${im}${esc(m.t)}</div>`:'<div class="av"></div
 const thumb=b=>createImageBitmap(b).then(im=>{const s=Math.min(1,160/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.7)}).catch(()=>null);
 function send(){const v=ta.value.trim();if(!v&&!files.length||busy)return;stopRec();
 const curMod=models[model],mi=MI[curMod]||{},c=PREM[curMod];
+if(!mi.byok&&!mi.id&&!window.claude&&!keyed().length){
+  openApi();
+  toast('⚡ Please add a free API key (like Google AI Studio or Groq) to start chatting!');
+  return;
+}
 if(!mi.byok&&c&&CR.n<c){openEarn(curMod);return}
 const blobs=files.map(a=>a.f),n=blobs.length;ta.value='';files=[];thumbs();exp=false;ta.blur();menu.classList.remove('open');
 if(!document.body.classList.contains('chatting')){dock.appendChild(pi);document.body.classList.add('chatting')}
@@ -478,13 +540,20 @@ const a=add('a','<div class="av"></div><div class="b"><span class="dots"><i></i>
 const turns=[];c.m.forEach(m=>{const r=m.r==='u'?'user':'assistant',l=turns[turns.length-1];if(l&&l.role===r)l.content+='\n\n'+m.t;else turns.push({role:r,content:m.t})});
 turns[0].content='Instructions: You are Ember, a warm, clear and helpful assistant. Reply in the same language and style the user writes in. You may use simple markdown: **bold**, - bullet lists, numbered lists, `inline code` and fenced code blocks with a language name. Do not use tables.'+ARTP(c)+(SET.ci?' The user set these custom instructions, follow them: '+SET.ci:'')+'\n\n'+turns[0].content;
 (async()=>{b.classList.add('live');busy=true;ctl=new AbortController();layout();let out='';
-try{const astra=mod==='GPT Astra-6',mi=MI[mod];const sample=mi&&mi.p?psample(mi.p,mi.id):astra?(keyed().length?bsample:null):await getSample();if(!sample)throw{code:astra?'noastra':'unavailable'};
+try{const astra=mod==='GPT Astra-6',mi=MI[mod]||{};
+const sample=mi.byok?byokSample(mi.pid,mi.model):(mi.id?psample(0,mi.id):(astra?(keyed().length?bsample:null):await getSample()));
+if(!sample)throw{code:astra?'noastra':'unavailable'};
 const opt={cache:false,signal:ctl.signal,modelTier:tier,effort:efl,onText:({text})=>{out=text;b.innerHTML=md(text);sc()}};
 if(blobs&&blobs.length){try{const l=await sample.limits();if(l.images)opt.images=blobs.slice(0,l.images.maxCount||blobs.length)}catch{}}
-const r=await sample(turns,opt);out=r.text||out;b.innerHTML=md(out);if(out){if(!mi.byok)spend(mod);c.m.push({r:'a',t:out});save();actsFor(a,ACT.copy+ACT.rg);sc();autoPv(out);title(c,sample)}}
-catch(e){out=(e&&e.text)||out;const k=e&&e.code,M={not_granted:'Ember needs your permission to ask Claude. Reload and tap Allow when asked.',rate_limited:'Too many requests right now. Wait a moment and try again.',unavailable:'Real replies only work when this page is opened inside Claude.',noastra:'GPT Astra-6 is not connected yet. Add its provider key under ⚡ API. No credits were used.',nokey:'Add your '+((e&&e.pn)||'provider')+' key under ⚡ API to use this model. No credits were used.'};
-const note=k==='cancelled'?(out?'':'Stopped.'):(M[k]||'Something went wrong. Please try again.');
-b.innerHTML=md(out+(out&&note?'\n\n':'')+note);if(out){c.m.push({r:'a',t:out});save();actsFor(a,ACT.copy+ACT.rg)}else actsFor(a,ACT.rt)}
+const r=await sample(turns,opt);out=r.text||out;b.innerHTML=md(out);
+if(out){if(!mi.byok)spend(mod);c.m.push({r:'a',t:out});save();actsFor(a,ACT.copy+ACT.rg);sc();autoPv(out);title(c,mi.byok?sample:(mi.id?await getSample():sample))}}
+catch(e){out=(e&&e.text)||out;const k=e&&e.code,M={not_granted:'Ember needs your permission to ask Claude. Reload and tap Allow when asked.',rate_limited:'Too many requests right now. Wait a moment and try again.',unavailable:'⚡ Please add a free API key (like Google AI Studio or Groq) under ⚡ API to chat with this model.',noastra:'GPT Astra-6 is not connected yet. Add its provider key under ⚡ API. No credits were used.',nocredit:'Not enough credits. Earn more, then try again.',nokey:'Add your '+((e&&e.pn)||'provider')+' key under ⚡ API to use this model. No credits were used.'};
+const note=k==='cancelled'?(out?'':'Stopped.'):(M[k]||(e&&e.message)||'Something went wrong. Please check your API key under ⚡ API.');
+b.innerHTML=md(out+(out&&note?'\n\n':'')+note);
+if(!out&&(k==='unavailable'||k==='nokey'||(e&&e.message&&/api key|quota|interactions api/i.test(e.message)))){
+  b.insertAdjacentHTML('beforeend',`<div style="margin-top:10px"><button type="button" class="chip" onclick="openApi()" style="cursor:pointer;border-color:var(--acc);color:var(--acc)">⚡ Open API Settings</button></div>`);
+}
+if(out){c.m.push({r:'a',t:out});save();actsFor(a,ACT.copy+ACT.rg)}else actsFor(a,ACT.rt)}
 finally{b.classList.remove('live');busy=false;ctl=null;layout();hist()}})()}
 async function exportChat(id){const c=chats.find(x=>x.id===id);if(!c)return;const t='# '+c.title+'\n\n'+c.m.map(m=>(m.r==='u'?'**You**':'**Ember**')+'\n\n'+m.t).join('\n\n---\n\n')+'\n';
 try{const d=await claude.use('downloads');if(!d)throw 0;await d.save({filename:(c.title.replace(/[^\w\- ]+/g,'').trim().slice(0,40)||'chat')+'.md',data:t})}catch{copy(t)}}
@@ -578,71 +647,42 @@ const r=e.target.closest('.ar');if(!r)return;const i=+r.dataset.i;if(e.target.cl
 document.querySelector('#side [data-k=artifacts]').onclick=artPanel;document.querySelector('#side [data-k=projects]').onclick=projPanel;
 document.querySelector('#side [data-k=code]').onclick=()=>{reset();MODE='code';ctxUp();toast('Code mode on. Ask for code or an app to build.')};
 ctxUp();
-/* ---------- Credits: earn to unlock premium models ---------- */
-/* DEMO: credits live in localStorage, so they can be edited by the user. For real money-saving, move balance + task verification to a server. */
-const PREM={'Fable 5.1':10,'GPT Astra-6':10};
-let CR={n:0,t:{}};try{Object.assign(CR,JSON.parse(localStorage.getItem('ember.cr')||'{}'))}catch{}
-const crSave=()=>{try{localStorage.setItem('ember.cr',JSON.stringify(CR))}catch{}};
+/* ---------- Real credits: balance, prices and earning all live on the server ---------- */
+const API=(window.EMBER_API||'').replace(/\/$/,'');
+let TOK='';try{TOK=localStorage.getItem('ember.tok')||''}catch{}
+const fmt=n=>(Math.floor(n*10)/10).toString();
+const api=(p,o={})=>fetch(API+p,{...o,headers:{'Content-Type':'application/json',...(TOK?{Authorization:'Bearer '+TOK}:{}),...(o.headers||{})}});
+async function boot(retry){try{
+if(!TOK){const r=await fetch(API+'/api/session',{method:'POST'});if(!r.ok)throw 0;TOK=(await r.json()).token;try{localStorage.setItem('ember.tok',TOK)}catch{}}
+const m=await api('/api/me');if(m.status===401&&!retry){TOK='';try{localStorage.removeItem('ember.tok')}catch{}return boot(1)}
+if(!m.ok)throw 0;CR.n=(await m.json()).credits;
+SRV=(await (await fetch(API+'/api/models')).json()).models||[];ON=true}catch{ON=false}
+crUp()}
+async function refreshMe(){try{const m=await api('/api/me');if(m.ok){CR.n=(await m.json()).credits;crUp()}}catch{}}
+const spend=refreshMe;
 const crBtn=document.createElement('button');crBtn.id='crBtn';crBtn.className='ghost';crBtn.type='button';crBtn.setAttribute('aria-label','Earn credits');$('#apiBtn').before(crBtn);crBtn.onclick=()=>openEarn();
-function crUp(){crBtn.textContent='✨ '+CR.n;menuUp()}
-function addCr(n){CR.n+=n;crSave();crUp();toast('+'+n+' credits ✨')}
-function spend(m){const c=PREM[m];if(!c)return;CR.n=Math.max(0,CR.n-c);crSave();crUp();if(CR.n<c)toast('Credits low: '+CR.n+'. Earn more to keep using '+m)}
-const CD={daily:864e5,ad:6e4,survey:432e5,fb:864e5};
-const left=k=>Math.max(0,(CR.t[k]||0)+CD[k]-Date.now());
-const wait=ms=>{const m=Math.ceil(ms/6e4);return m>=60?Math.ceil(m/60)+'h':m+'m'};
-function earnUp(want){const m=$('#erm');if(!m)return;
-const row=(k,t,d,r,body)=>{const l=left(k);return `<div class="pc"><div class="pt"><b>${t}</b><span class="pb" style="display:inline-block">+${r}</span></div><div class="pd">${d}</div>${l?`<div class="ps">Available again in ${wait(l)}</div>`:body}</div>`};
-const sel=(id,ph,o)=>`<select id="${id}"><option value="">${ph}</option>${o.map(x=>`<option>${x}</option>`).join('')}</select>`;
-m.innerHTML=`<div class="apc" role="dialog" aria-label="Earn credits"><div class="aph"><h3>Unlock premium</h3><button class="ghost" data-c type="button" aria-label="Close">✕</button></div><p class="apn">${want?hx(want)+' costs '+PREM[want]+' credits per message. ':'Fable 5.1 and GPT Astra-6 cost 10 credits per message. '}You have <b>✨ ${CR.n}</b>. Finish tasks to earn more.</p><div class="apg">`+
-row('daily','Daily check-in','Come back every day.',2,'<div class="pr"><button class="chip" data-do="daily" type="button">Claim</button></div>')+
-row('ad','Watch a short ad','10 seconds. Keep this window open.',5,'<div class="pr"><button class="chip" data-do="ad" type="button">Watch ad</button></div>')+
-row('survey','Quick survey','Three questions, under a minute.',10,`<div class="pf">${sel('s1','What do you use Ember for?',['Study','Work','Coding','Fun'])}${sel('s2','How is Ember so far?',['Great','Good','Okay','Needs work'])}<input id="s3" maxlength="120" placeholder="One thing to improve (optional)"><button class="chip" data-do="survey" type="button">Submit survey</button></div>`)+
-row('fb','Honest feedback','Tell us what works and what does not. At least 40 characters.',8,'<div class="pf"><textarea id="fb" maxlength="600" placeholder="Your feedback"></textarea><button class="chip" data-do="fb" type="button">Send feedback</button></div>')+
-`</div></div>`}
-function openEarn(want){let m=$('#erm');if(!m){m=document.createElement('div');m.id='erm';document.body.appendChild(m);
-m.onclick=e=>{if(e.target===m||e.target.closest('[data-c]'))return m.classList.remove('open');const b=e.target.closest('[data-do]');if(!b)return;const k=b.dataset.do;
-if(k==='ad'){/* DEMO timer. Swap in a rewarded-ad SDK and verify the reward on your server. */b.disabled=true;let s=10;const tick=()=>{if(!m.classList.contains('open'))return;b.textContent='Ad playing… '+s+'s';if(!s--){CR.t.ad=Date.now();addCr(5);earnUp();return}setTimeout(tick,1000)};tick();return}
-if(k==='daily'){CR.t.daily=Date.now();addCr(2)}
-else if(k==='survey'){if(!$('#s1').value||!$('#s2').value)return toast('Answer the first two questions');CR.t.survey=Date.now();addCr(10)}
-else if(k==='fb'){if($('#fb').value.trim().length<40)return toast('Write at least 40 characters');CR.t.fb=Date.now();addCr(8)}
-crSave();earnUp()}}
-earnUp(want);requestAnimationFrame(()=>m.classList.add('open'))}
-addEventListener('keydown',e=>{if(e.key==='Escape'){const m=$('#erm');m&&m.classList.remove('open')}});
-/* ---------- Premium catalog: every platform's top models ---------- */
-const MI={};
-const CAT=[
-{g:'OpenAI',p:'openai',ids:['gpt-5','gpt-5-mini','gpt-4.1','gpt-4o','o3','o4-mini']},
-{g:'Google',p:'google',ids:['gemini-2.5-pro','gemini-2.5-flash']},
-{g:'xAI',p:'xai',ids:['grok-4','grok-3','grok-3-mini']},
-{g:'DeepSeek',p:'deepseek',ids:['deepseek-chat','deepseek-reasoner']},
-{g:'Mistral',p:'mistral',ids:['mistral-large-latest','codestral-latest']},
-{g:'Perplexity',p:'perplexity',ids:['sonar','sonar-pro','sonar-reasoning-pro']},
-{g:'Cohere',p:'cohere',ids:['command-a-03-2025','command-r-plus']},
-{g:'Together AI',p:'together',ids:[]},
-{g:'Fireworks AI',p:'fireworks',ids:[]}];
-/* credits per message: flagship 20, standard 10, light 5 */
-const tcost=id=>/opus|ultra|gpt-5(?!-(mini|nano))|\bo3(?!-mini)|grok-4|reasoning-pro|large|pro\b|r-plus/i.test(id)?20:/mini|nano|flash|small|lite|haiku|8b|chat|sonar$|instant/i.test(id)?5:10;
-function buildModels(){const out=['Sonnet 5.5','Haiku 5.5'],seen=new Set(out);
-Object.keys(PREM).forEach(k=>delete PREM[k]);Object.keys(MI).forEach(k=>delete MI[k]);out.forEach(n=>MI[n]={g:'Free Models'});
-const add=(n,g,c,p,id)=>{const nm=seen.has(n)?n+' · '+g:n;if(seen.has(nm))return;seen.add(nm);out.push(nm);MI[nm]={g,p,id};PREM[nm]=c};
-add('Fable 5.1','Claude',10);add('Opus 5.5','Claude',5);add('GPT Astra-6','Custom',10);
-PV.forEach(p=>{
-  const ms=BK.models[p.id]||(BK.keys[p.id]&&p.s?p.s:[]);
-  if(ms&&ms.length){
-    ms.forEach(mId=>{
-      let nm=mId;if(seen.has(nm))nm+=' · '+p.n;if(seen.has(nm))return;
-      seen.add(nm);out.push(nm);MI[nm]={g:p.n+' (Free)',p:p.id,id:mId,byok:true};
-    });
-  }
-});
-CAT.forEach(x=>{const ids=[...x.ids];ids.forEach(i=>add(i,x.g,tcost(i),x.p,i))});
-models.length=0;out.forEach(n=>models.push(n))}
-/* one provider, one model. Throws nokey if the key is missing, so no credits are spent. */
-const psample=(pid,model)=>async(input,opt={})=>{const msgs=typeof input==='string'?[{role:'user',content:input}]:input,p=PV.find(x=>x.id===pid),key=BK.keys[pid];if(!key)throw{code:'nokey',pn:p.n};let out='';
-try{await callOne(p,key,model,msgs,opt.signal,t=>{out+=t;opt.onText&&opt.onText({text:out,delta:t})});if(!out)throw{code:'failed'};return{text:out}}
-catch(e){if(e&&e.name==='AbortError')throw{code:'cancelled',text:out};if(out)return{text:out};throw{code:'failed'}}};
-applySet();crUp();marks();layout();hist();
+function crUp(){crBtn.textContent='✨ '+(ON?fmt(CR.n):'–');menuUp()}
+/* one premium call = one request to YOUR server. It checks the balance, calls the provider with the secret key, then charges real cost x markup. */
+const psample=(_p,id)=>async(input,opt={})=>{const msgs=typeof input==='string'?[{role:'user',content:input}]:input;let out='';
+try{await callOne({b:API+'/api'},TOK,id,msgs,opt.signal,t=>{out+=t;opt.onText&&opt.onText({text:out,delta:t})});if(!out)throw{code:'failed'};refreshMe();return{text:out}}
+catch(e){if(e&&e.name==='AbortError'){refreshMe();throw{code:'cancelled',text:out}}if(out){refreshMe();return{text:out}}
+const m=String(e&&e.message||'');if(m.startsWith('402')){openEarn();throw{code:'nocredit'}}if(m.startsWith('401')){TOK='';try{localStorage.removeItem('ember.tok')}catch{}boot()}throw{code:'failed'}}};
+/* earn: the server hands out real offer links. Credits arrive when the network confirms to the server, never from this page. */
+function earnUp(offers,want){const m=$('#erm');if(!m)return;
+const head=`<div class="aph"><h3>Unlock premium</h3><button class="ghost" data-c type="button" aria-label="Close">✕</button></div>`;
+if(!ON){m.innerHTML=`<div class="apc" role="dialog" aria-label="Earn credits">${head}<p class="apn">Premium models need the Ember server. Open the app from your server address, or set <code>window.EMBER_API</code>.</p></div>`;return}
+const cards=(offers||[]).map(o=>`<div class="pc"><div class="pt"><b>${hx(o.label)}</b><span class="pb" style="display:inline-block">${hx(o.kind)}</span></div><div class="pd">${hx(o.est)}</div><div class="pr"><a href="${hx(o.url)}" target="_blank" rel="noopener">${o.kind==='ad'?'Watch ad':'Open surveys'} ↗</a></div></div>`).join('')||'<div class="pd">No earn options are switched on yet.</div>';
+m.innerHTML=`<div class="apc" role="dialog" aria-label="Earn credits">${head}<p class="apn">${want&&PREM[want]?hx(want)+' costs about '+PREM[want]+' credits per message. ':''}You have <b>✨ ${fmt(CR.n)}</b>. Finish a task in the new tab. Credits appear here by themselves once the network confirms it, usually within a minute.</p><div class="apg">${cards}</div></div>`}
+async function openEarn(want){let m=$('#erm');if(!m){m=document.createElement('div');m.id='erm';document.body.appendChild(m);
+m.onclick=e=>{if(e.target===m||e.target.closest('[data-c]')){m.classList.remove('open');clearInterval(etm)}}}
+earnUp([],want);requestAnimationFrame(()=>m.classList.add('open'));if(!ON)return boot().then(()=>earnUp([],want));
+let offers=[];try{const r=await api('/api/offers');if(r.ok)offers=(await r.json()).offers}catch{}
+earnUp(offers,want);clearInterval(etm);let was=CR.n;
+etm=setInterval(async()=>{if(!m.classList.contains('open'))return clearInterval(etm);await refreshMe();if(CR.n>was){toast('+'+fmt(CR.n-was)+' credits ✨');earnUp(offers,want);was=CR.n}},4000)}
+addEventListener('keydown',e=>{if(e.key==='Escape'){const m=$('#erm');m&&m.classList.remove('open');clearInterval(etm)}});
+applySet();crUp();marks();layout();hist();boot();
 PV.forEach(p=>{if(BK.keys[p.id]&&(!BK.models[p.id]||!BK.models[p.id].length))loadModels(p)});
+setInterval(()=>{if(ON&&!document.hidden)refreshMe()},30000);
 </script>
 </body>
 </html>
