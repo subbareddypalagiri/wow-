@@ -272,4 +272,7 @@ app.get('/api/admin/summary', (req, res) => {
 });
 
 if (require.main === module) app.listen(cfg.PORT, () => console.log('Ember server on :' + cfg.PORT + (cfg.DEV_MODE ? ' (DEV MODE)' : '')));
-module.exports = { app, db };
+app.app = app;
+app.db = db;
+module.exports = app;
+

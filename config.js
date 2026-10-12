@@ -1,11 +1,16 @@
 'use strict';
 // All money knobs live here. Change them with environment variables, not code.
+const os = require('os');
+const path = require('path');
 const env = process.env;
 const num = (k, d) => (env[k] != null && env[k] !== '' ? Number(env[k]) : d);
 
+const isVercel = !!(env.VERCEL || env.AWS_LAMBDA_FUNCTION_NAME);
+const defaultDb = isVercel ? path.join(os.tmpdir(), 'ember.db') : './ember.db';
+
 const cfg = {
   PORT: num('PORT', 3000),
-  DB_PATH: env.DB_PATH || './ember.db',
+  DB_PATH: env.DB_PATH || defaultDb,
   DEV_MODE: env.DEV_MODE === '1',
   SESSION_SECRET: env.SESSION_SECRET || '',
   ADMIN_KEY: env.ADMIN_KEY || '',
@@ -30,8 +35,12 @@ const cfg = {
 };
 
 if (!cfg.SESSION_SECRET) {
-  if (cfg.DEV_MODE) cfg.SESSION_SECRET = 'dev-only-secret';
-  else { console.error('SESSION_SECRET is required (set DEV_MODE=1 for local testing).'); process.exit(1); }
+  if (cfg.DEV_MODE || isVercel) {
+    cfg.SESSION_SECRET = 'ember-secret-' + (isVercel ? 'vercel' : 'dev');
+  } else {
+    cfg.SESSION_SECRET = 'ember-default-session-secret';
+    console.warn('Warning: SESSION_SECRET not set in environment, using default.');
+  }
 }
 if (cfg.USER_SHARE >= cfg.MARKUP) {
   console.error(`Refusing to start: USER_SHARE (${cfg.USER_SHARE}) >= MARKUP (${cfg.MARKUP}). You would lose money on every credit.`);

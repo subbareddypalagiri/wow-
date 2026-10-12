@@ -7,12 +7,16 @@
     "start": "node server.js",
     "test": "node test.js"
   },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "keywords": [
     "ai",
     "byok",
     "ember",
     "llm",
-    "express"
+    "express",
+    "vercel"
   ],
   "author": "Palagiri Subbareddy",
   "license": "ISC",

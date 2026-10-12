@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/postback/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/dev/(.*)",
+      "destination": "/api/index.js"
+    }
+  ]
+}
