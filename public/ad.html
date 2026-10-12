@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Watch an ad</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0e0c0a;color:#f6efe6;font:15px/1.5 system-ui,sans-serif;padding:20px;text-align:center}
+.c{max-width:420px}button{padding:12px 20px;border:0;border-radius:99px;background:#ff7500;color:#1a0d00;font:600 15px system-ui;cursor:pointer}code{background:#ffffff1a;padding:2px 6px;border-radius:6px}</style></head>
+<body><div class="c"><h2>Rewarded ad</h2>
+<p id="m">Loading…</p><div id="slot"></div></div>
+<script>
+/* PRODUCTION: put your rewarded-ad SDK here (for example Google Ad Manager rewarded ads, AdMob, AppLovin, Unity).
+   The ad network must call YOUR server at /postback/ad_network_1 when the ad was really watched.
+   Do NOT add credits from this page. The server only trusts the network's signed callback.
+   DEV_MODE only: the button below fakes the network's callback so you can test the whole flow. */
+const u=new URLSearchParams(location.search).get('user');
+const m=document.getElementById('m');
+fetch('/dev/ping').then(r=>{
+  if(r.status===404){m.innerHTML='Ad slot not connected yet. See <code>README.md</code>, step 4.';return}
+  m.textContent='DEV mode: this simulates a network callback.';
+  const b=document.createElement('button');b.textContent='Simulate completed ad';
+  b.onclick=async()=>{let t='';try{t=localStorage.getItem('ember.tok')||''}catch{}
+    const r=await fetch('/dev/earn',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify({kind:'ad'})});
+    m.textContent=r.ok?'Credited. You can close this tab.':'Failed ('+r.status+')'};
+  document.getElementById('slot').appendChild(b)}).catch(()=>{m.textContent='Server not reachable.'});
+</script></body></html>

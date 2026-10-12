@@ -1,0 +1,23 @@
+{
+  "_note": "USD per 1,000,000 tokens. VERIFY every number on the provider's pricing page before launch. A model with in/out = null is DISABLED (the server refuses to sell what it cannot price).",
+  "models": {
+    "gpt-5":            { "provider": "openai", "group": "OpenAI", "in": 1.25, "out": 10.0, "tok": "max_completion_tokens", "maxOut": 4000 },
+    "gpt-5-mini":       { "provider": "openai", "group": "OpenAI", "in": 0.25, "out": 2.0,  "tok": "max_completion_tokens", "maxOut": 4000 },
+    "gpt-4.1":          { "provider": "openai", "group": "OpenAI", "in": 2.0,  "out": 8.0 },
+    "gpt-4o":           { "provider": "openai", "group": "OpenAI", "in": 2.5,  "out": 10.0 },
+    "o3":               { "provider": "openai", "group": "OpenAI", "in": 2.0,  "out": 8.0,  "tok": "max_completion_tokens", "maxOut": 6000 },
+    "o4-mini":          { "provider": "openai", "group": "OpenAI", "in": 1.1,  "out": 4.4,  "tok": "max_completion_tokens", "maxOut": 6000 },
+    "grok-4":           { "provider": "xai", "group": "xAI", "in": 3.0, "out": 15.0, "maxOut": 4000 },
+    "grok-3":           { "provider": "xai", "group": "xAI", "in": 3.0, "out": 15.0 },
+    "grok-3-mini":      { "provider": "xai", "group": "xAI", "in": 0.3, "out": 0.5 },
+    "deepseek-chat":    { "provider": "deepseek", "group": "DeepSeek", "in": 0.27, "out": 1.1 },
+    "deepseek-reasoner":{ "provider": "deepseek", "group": "DeepSeek", "in": 0.55, "out": 2.19, "maxOut": 4000 },
+    "gemini-2.5-pro":   { "provider": "google", "group": "Google", "in": 1.25, "out": 10.0, "maxOut": 4000 },
+    "gemini-2.5-flash": { "provider": "google", "group": "Google", "in": 0.3,  "out": 2.5,  "maxOut": 3000 },
+    "mistral-large-latest": { "provider": "mistral", "group": "Mistral", "in": 2.0, "out": 6.0 },
+    "sonar":            { "provider": "perplexity", "group": "Perplexity", "in": 1.0, "out": 1.0 },
+    "sonar-pro":        { "provider": "perplexity", "group": "Perplexity", "in": 3.0, "out": 15.0 },
+    "claude-fable-5-1": { "provider": "anthropic", "group": "Claude", "label": "Fable 5.1", "in": null, "out": null },
+    "claude-opus-5-5":  { "provider": "anthropic", "group": "Claude", "label": "Opus 5.5",  "in": null, "out": null }
+  }
+}

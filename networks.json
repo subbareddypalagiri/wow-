@@ -1,0 +1,26 @@
+{
+  "_note": "TEMPLATES. Copy each network's real postback parameter names and signature rule from ITS documentation, then fill them in here. payout must be what the NETWORK PAYS YOU in USD, never the network's own virtual currency. Remove the entries you do not use.",
+  "survey_wall_1": {
+    "label": "Surveys",
+    "kind": "survey",
+    "secretEnv": "SURVEY1_SECRET",
+    "params":  { "uid": "uid", "tx": "tx", "payout": "payout", "status": "status" },
+    "payoutScale": 1,
+    "statusOk": ["completed", "1"],
+    "statusReversed": ["reversed", "2"],
+    "sig": { "param": "sig", "algo": "sha256", "hmac": true, "template": "{uid}|{tx}|{payout}|{status}" },
+    "wallUrl": "https://YOUR-SURVEY-WALL.example/offerwall?app=YOUR_APP_ID&user={uid}",
+    "maxPayoutUsd": 2.0
+  },
+  "ad_network_1": {
+    "label": "Watch an ad",
+    "kind": "ad",
+    "secretEnv": "AD1_SECRET",
+    "params":  { "uid": "uid", "tx": "tx", "status": "status" },
+    "fixedPayoutUsd": null,
+    "statusOk": ["completed", "1"],
+    "statusReversed": ["reversed"],
+    "sig": { "param": "sig", "algo": "sha256", "hmac": true, "template": "{uid}|{tx}|{status}" },
+    "wallUrl": "/ad.html?user={uid}"
+  }
+}

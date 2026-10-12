@@ -1,0 +1,22 @@
+{
+  "name": "ember-server",
+  "version": "1.0.0",
+  "description": "Ember AI server with BYOK and SQLite ledger",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "ai",
+    "byok",
+    "ember",
+    "llm",
+    "express"
+  ],
+  "author": "Palagiri Subbareddy",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}
